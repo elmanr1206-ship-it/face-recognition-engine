@@ -108,6 +108,15 @@ async def read_index():
         return FileResponse(path)
     return {"error": f"No encontré el index.html en la ruta: {path}"}
 
+@app.get("/api/estado")
+async def obtener_estado(db: Session = Depends(get_db)):
+    # Contamos cuántos rostros hay registrados de verdad
+    conteo = db.query(UsuarioRostro).count()
+    return {
+        "status": "vacio" if conteo == 0 else "listo",
+        "vectores": conteo
+    }
+
 @app.on_event("startup")
 async def startup_event():
     # Al arrancar, intentamos cargar lo que haya en la DB
