@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+sqlalchemy
+pymysql
+cryptography
+opencv-python-headless
+numpy
+scikit-learn
