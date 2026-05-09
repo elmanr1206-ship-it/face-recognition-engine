@@ -8,6 +8,20 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
         
+        .ghost-reveal {
+    filter: invert(1) contrast(150%) brightness(50%);
+    animation: revealGhost 2s forwards ease-in-out;
+    }
+    @keyframes revealGhost {
+        100% { filter: invert(0) contrast(100%) brightness(100%); }
+    }
+    .target-lock {
+        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5), inset 0 0 20px #06b6d4;
+        border: 2px solid #06b6d4;
+        animation: lockIn 0.5s infinite alternate;
+    }
+    @keyframes lockIn { 100% { border-color: #ff003c; transform: scale(0.95); } }
+
         body {
             font-family: 'Urbanist', sans-serif;
             background: radial-gradient(circle at top right, #0f172a, #000);
@@ -297,70 +311,105 @@ async function actualizarEstadoMotor() {
             actualizarEstadoMotor();
         }
 
-        async function capturarYPredecir() {
-            document.getElementById('scanLine').classList.remove('hidden');
-            terminal.innerHTML = '> [SCAN] Solicitando imagen...<br>';
-            
-            const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
-            canvas.getContext('2d').drawImage(video, 0, 0);
-            const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
-            
-            setTimeout(() => terminal.innerHTML += '> [MATH] Restando Cara Promedio Ψ...<br>', 300);
-            setTimeout(() => terminal.innerHTML += '> [PCA] Proyectando en subespacio Ω...<br>', 600);
+async function capturarYPredecir() {
+    // 1. Target Lock: Ponemos la mira en la cámara
+    const mira = document.createElement('div');
+    mira.className = "absolute inset-0 m-auto w-48 h-48 target-lock rounded-3xl z-50 pointer-events-none";
+    document.getElementById('webcam').parentElement.appendChild(mira);
+    document.getElementById('scanLine').classList.remove('hidden');
+    
+    terminal.innerHTML = '> [SCAN] Aislando biometría facial...<br>';
+    
+    const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
+    
+    try {
+        const formData = new FormData(); formData.append('file', blob);
+        const response = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/identificar', { method: 'POST', body: formData });
+        const data = await response.json();
 
-            try {
-                const formData = new FormData(); formData.append('file', blob);
-                const response = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/identificar', { method: 'POST', body: formData });
-                const data = await response.json();
+        // 2. Quitamos la mira
+        mira.remove();
+        document.getElementById('scanLine').classList.add('hidden');
 
-                setTimeout(() => {
-                    podioDistancias.innerHTML = '';
-                    if(data.top_3) {
-                        data.top_3.forEach((m, i) => {
-                           let color = i === 0 ? 'text-green-400' : 'text-gray-400';
-                           // Ahora es similitud cosenoidal, no distancia
-                           terminal.innerHTML += `<span class="${color}">> #${i+1}: ${m.nombre} | Similitud: ${m.distancia}%</span><br>`;
-                           podioDistancias.innerHTML += `
-                              <div class="flex justify-between items-center glass p-2 rounded border border-white/5">
-                                 <span class="text-white text-sm">${m.nombre}</span>
-                                 <span class="text-cyan-400 font-mono text-xs">${m.distancia}%</span>
-                              </div>`;
-                        });
-                    }
-
-                    document.getElementById('infoMatch').classList.remove('hidden');
-                    document.getElementById('nombreMatch').innerText = data.nombre;
-                    document.getElementById('confianzaMatch').innerText = `${data.confianza}% CONFIDENCE`;
-                    document.getElementById('statusLabel').innerText = "IDENTIFIED";
-
-                    let mensajeVoz = `Acceso concedido. Bienvenido, ${data.nombre}.`;
-
-                    if (data.nombre.includes("ALEJANDRO") || data.nombre.includes("OSCAR")) {
-                        mensajeVoz = `Alerta. Se ha detectado a ${data.nombre}. Se recomienda usar tapabocas por la fealdad. Pero el álgebra confirma la identidad.`;
-                        terminal.innerHTML += `<span class="text-yellow-400">> [WARNING] Anomalía estética detectada. Ignorando...</span><br>`;
-                    } else if (data.nombre === "DESCONOCIDO") {
-                        mensajeVoz = "Intruso detectado. Soltando a los perros de la Unimag en 3, 2, 1.";
-                    }
-
-                    const parlante = new SpeechSynthesisUtterance(mensajeVoz);
-                    parlante.rate = 1.1; 
-                    parlante.pitch = 0.9; 
-                    window.speechSynthesis.speak(parlante);
-                    
-                    if (data.cara_procesada) {
-                        document.getElementById('caraProcesada').src = `data:image/jpeg;base64,${data.cara_procesada}`;
-                        document.getElementById('caraProcesada').classList.remove('hidden');
-                        document.getElementById('placeholderImg').classList.add('hidden');
-                    }
-                    terminal.innerHTML += '> [SYS] Done.<br>';
-                    terminal.scrollTop = terminal.scrollHeight; // Auto-scroll
-                }, 1000);
-            } catch (err) {
-                terminal.innerHTML += '<span class="text-red-500">> [ERROR] Fatigue.exe Kernel Panic.</span><br>';
-            } finally {
-                setTimeout(() => document.getElementById('scanLine').classList.add('hidden'), 1500);
-            }
+        if(data.nombre === "FALTAN_DATOS" || data.nombre === "NO_CARA") {
+            terminal.innerHTML += `<span class="text-red-500">> [ERROR] ${data.nombre}</span><br>`;
+            return;
         }
+
+        // 3. Imprimir el Álgebra REAL en la terminal paso a paso
+        terminal.innerHTML += '> [MATH] Restando Cara Promedio (Φ = Γ - Ψ)...<br>';
+        terminal.innerHTML += '> [PCA] Proyectando en subespacio Eigen (Ω)...<br>';
+        
+        let i = 0;
+        let pesosInterval = setInterval(() => {
+            if(i >= data.pesos_reales.length) {
+                clearInterval(pesosInterval);
+                mostrarResultados(data); // Llamamos al final del renderizado
+            } else {
+                // Imprimimos el array real de a 4 dimensiones por línea
+                let chunk = data.pesos_reales.slice(i, i+4).map(n => n > 0 ? `+${n}` : n).join('\t');
+                terminal.innerHTML += `<span class="text-cyan-600">> ω[${i}-${i+3}]: [ ${chunk} ]</span><br>`;
+                terminal.scrollTop = terminal.scrollHeight;
+                i += 4;
+            }
+        }, 150); // Se demora un poquito pa' que se vea el "cálculo"
+
+    } catch (err) {
+        mira.remove();
+        terminal.innerHTML += '<span class="text-red-500">> [ERROR] Kernel Panic. Servidor caído.</span><br>';
+    }
+}
+
+// Función auxiliar para mostrar el podio y la foto cuando termine de "calcular"
+function mostrarResultados(data) {
+    podioDistancias.innerHTML = '';
+    data.top_3.forEach((m, i) => {
+       let colorBarra = i === 0 ? 'bg-cyan-400' : 'bg-gray-700';
+       let glow = i === 0 ? 'box-shadow: 0 0 12px #22d3ee;' : '';
+       
+       podioDistancias.innerHTML += `
+          <div class="mb-4">
+             <div class="flex justify-between text-[11px] mb-1.5 font-mono uppercase tracking-widest">
+                <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
+                    <i class="fa-solid ${i===0 ? 'fa-crosshairs' : 'fa-user'} mr-1"></i> ${m.nombre}
+                </span>
+                <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-600'}">${m.distancia}% MATCH</span>
+             </div>
+             <div class="w-full bg-black/60 rounded-full h-2 border border-white/5 overflow-hidden">
+                <div class="${colorBarra} h-full rounded-full transition-all duration-[1500ms] ease-out" 
+                     style="width: 0%; ${glow}" data-width="${m.distancia}%"></div>
+             </div>
+          </div>`;
+    });
+
+    setTimeout(() => {
+        const barras = podioDistancias.querySelectorAll('[data-width]');
+        barras.forEach(b => b.style.width = b.getAttribute('data-width'));
+    }, 50);
+
+    document.getElementById('infoMatch').classList.remove('hidden');
+    document.getElementById('nombreMatch').innerText = data.nombre;
+    document.getElementById('confianzaMatch').innerText = `${data.confianza}% CONFIDENCE`;
+    document.getElementById('statusLabel').innerText = "IDENTIFIED";
+
+    // 4. Efecto Fantasma Real
+    if (data.cara_procesada) {
+        const imgElement = document.getElementById('caraProcesada');
+        imgElement.src = `data:image/jpeg;base64,${data.cara_procesada}`;
+        imgElement.classList.remove('hidden');
+        // Le aplicamos la clase CSS de revelado para que parezca magia oscura
+        imgElement.classList.remove('ghost-reveal'); 
+        void imgElement.offsetWidth; // Trigger reflow xd
+        imgElement.classList.add('ghost-reveal');
+        
+        document.getElementById('placeholderImg').classList.add('hidden');
+    }
+    
+    terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
+    terminal.scrollTop = terminal.scrollHeight;
+}
     </script>
 </body>
 </html>

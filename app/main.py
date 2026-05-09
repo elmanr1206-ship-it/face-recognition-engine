@@ -151,8 +151,6 @@ async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db
     similitudes = np.dot(pca.weights, projection) / (norm_weights * norm_proj)
     
     umbral = 0.85
-    
-    # 🌟 EL FIX: Sacar los 3 mejores matches
     top_indices = np.argsort(similitudes)[::-1][:3]
     top_3 = []
     for i in top_indices:
@@ -160,15 +158,18 @@ async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db
         conf = round(((sim_val - umbral) / (1.0 - umbral)) * 100, 2) if sim_val > umbral else 0
         top_3.append({"nombre": nombres_db[i], "distancia": conf})
         
-    # 📸 Mandar la cara que el motor "vio" (procesada y recortada)
     _, buffer_cara = cv2.imencode('.jpg', rostro)
     cara_b64 = base64.b64encode(buffer_cara).decode('utf-8')
+
+    # 🌟 AQUÍ ESTÁ LA MAGIA REAL: Formateamos el vector de pesos reales para el JS
+    pesos_reales = [round(float(w), 4) for w in projection]
 
     return {
         "nombre": top_3[0]["nombre"] if top_3[0]["distancia"] > 0 else "DESCONOCIDO",
         "confianza": top_3[0]["distancia"],
         "top_3": top_3,
-        "cara_procesada": cara_b64
+        "cara_procesada": cara_b64,
+        "pesos_reales": pesos_reales # <-- La verdadera matemática, cero humo.
     }
 
 @app.delete("/api/borrar_todo")
