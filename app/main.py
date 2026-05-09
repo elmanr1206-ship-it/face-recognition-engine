@@ -3,7 +3,6 @@ import cv2
 import numpy as np
 import base64
 import json
-import os
 from sqlalchemy import create_engine
 from fastapi import FastAPI, UploadFile, File, Depends
 from fastapi.responses import FileResponse
@@ -13,57 +12,38 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session
 from app.core.pca import PCAEngine
 
-# 🏗️ CONFIGURACIÓN DE LA BASE DE DATOS (TiDB)
-# En Render, pega tu Connection String en la variable de entorno DATABASE_URL
+# 🏗️ CONFIGURACIÓN DE LA BASE DE DATOS
 DB_URL = os.getenv("DATABASE_URL", "mysql+pymysql://fJSazaxG3kcXfKw.root:TU_PASS@gateway01.../test")
 
-engine = create_engine(
-    DB_URL, 
-    connect_args={"ssl": {"ca": "/etc/ssl/certs/ca-certificates.crt"}}
-)
+engine = create_engine(DB_URL, connect_args={"ssl": {"ca": "/etc/ssl/certs/ca-certificates.crt"}})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Modelo de la tabla
 class UsuarioRostro(Base):
     __tablename__ = "usuarios_rostros"
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100))
-    vector_pesos = Column(Text) # Guardamos los 20 números como un JSON string
+    vector_pesos = Column(Text) 
 
-# Crear la tabla si no existe
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Inyectar la sesión de la DB
 def get_db():
     db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    try: yield db
+    finally: db.close()
 
 pca = PCAEngine(n_components=20)
 nombres_db = []
-
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# --- 🧠 LÓGICA DE MOTOR CON BASE DE DATOS ---
-
+# --- 🧠 LÓGICA DE MOTOR: AHORA SÍ RE-ENTRENA CRUDO ---
 def entrenar_motor_desde_db(db: Session):
-    """Carga TODAS las caras crudas y revive el motor PCA desde cero."""
     global nombres_db
     registros = db.query(UsuarioRostro).all()
     
-    # El álgebra necesita mínimo 2 personas para no estallarse
     if len(registros) < 2:
         pca.mean_face = None
         pca.eigenfaces = None
@@ -76,72 +56,63 @@ def entrenar_motor_desde_db(db: Session):
     
     for r in registros:
         nombres_db.append(r.nombre)
-        # Cargamos los 10,000 pixeles originales
-        all_raw_faces.append(json.loads(r.vector_pesos))
+        all_raw_faces.append(json.loads(r.vector_pesos)) # Cargamos píxeles crudos
     
-    # 🌟 LA MAGIA: Entrenamos el PCA desde cero con las caras puras
     X = np.array(all_raw_faces)
-    pca.fit(X) 
+    pca.fit(X) # Re-entrenamos a la bestia
     return True
 
-# --- 📸 PROCESAMIENTO DE IMAGEN ---
-
+# --- 📸 PROCESAMIENTO: VISIÓN NOCTURNA ACTIVADA ---
 def cazar_cara(imagen_bytes):
-    # 1. Ver si el radar (XML) se quedó en coma en el servidor
-    if face_cascade.empty():
-        return None, "RADAR_MUERTO"
-
-    # 2. Decodificar los bytes que manda el JS
     nparr = np.frombuffer(imagen_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None: return None, "FOTO_CORRUPTA"
     
-    if img is None:
-        return None, "FOTO_CORRUPTA"
-        
     gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gris = cv2.equalizeHist(gris) # HACK: Ecualizamos para que vea en tus fotos oscuras xd
     
-    # 🌟 EL HACK DEL TESO: Ecualizar el histograma.
-    # Esto fuerza los contrastes y hace que OpenCV no se ponga de nena con las sombras.
-    gris = cv2.equalizeHist(gris)
-    
-    if np.mean(gris) < 20: 
-        return None, "OSCURIDAD"
+    if np.mean(gris) < 20: return None, "OSCURIDAD"
         
-    # 3. Buscar la cara (Bajé la exigencia del scaleFactor pa' que detecte más fácil)
     caras = face_cascade.detectMultiScale(gris, scaleFactor=1.15, minNeighbors=4, minSize=(60, 60))
-    
-    if len(caras) == 0: 
-        return None, "NO_CARA"
+    if len(caras) == 0: return None, "NO_CARA"
         
-    # 4. Recortar la pepa de la cara más grande
     (x, y, w, h) = max(caras, key=lambda rect: rect[2] * rect[3])
     rostro = cv2.resize(gris[y:y+h, x:x+w], (100, 100))
-    
     return rostro, "OK"
 
 # --- 🚀 ENDPOINTS ---
-
 @app.get("/")
 async def read_index():
-    # Le decimos que se meta a la carpeta 'frontend' a buscar el archivo
     path = os.path.join(os.getcwd(), "frontend", "index.html")
-    
-    if os.path.exists(path):
-        return FileResponse(path)
-    return {"error": f"No encontré el index.html en la ruta: {path}"}
+    if os.path.exists(path): return FileResponse(path)
+    return {"error": f"No encontré el index.html en: {path}"}
 
 @app.get("/api/estado")
 async def obtener_estado(db: Session = Depends(get_db)):
-    # Contamos cuántos rostros hay registrados de verdad
     conteo = db.query(UsuarioRostro).count()
+    if conteo < 2 or pca.mean_face is None:
+        return {"status": "vacio", "total": conteo, "nombres": nombres_db}
+
+    # Mandarle la comida que el Frontend lambón pide (Base64)
+    _, buffer_mean = cv2.imencode('.jpg', pca.mean_face.reshape(100, 100))
+    mean_b64 = base64.b64encode(buffer_mean).decode('utf-8')
+
+    eigen_b64_list = []
+    for ef in pca.eigenfaces:
+        ef_norm = cv2.normalize(ef.reshape(100, 100), None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+        _, buffer_ef = cv2.imencode('.jpg', ef_norm)
+        eigen_b64_list.append(base64.b64encode(buffer_ef).decode('utf-8'))
+
     return {
-        "status": "vacio" if conteo == 0 else "listo",
-        "vectores": conteo
+        "status": "ready", # AHORA SÍ HACE MATCH CON TU JS
+        "total": conteo,
+        "nombres": nombres_db,
+        "cara_promedio": mean_b64,
+        "eigenfaces": eigen_b64_list
     }
 
 @app.on_event("startup")
 async def startup_event():
-    # Al arrancar, intentamos cargar lo que haya en la DB
     db = SessionLocal()
     entrenar_motor_desde_db(db)
     db.close()
@@ -150,38 +121,27 @@ async def startup_event():
 async def registrar(nombre: str, file: UploadFile = File(...), db: Session = Depends(get_db)):
     contents = await file.read()
     rostro, status = cazar_cara(contents)
+    if status != "OK": return {"message": f"Error: {status}"}
     
-    if status != "OK":
-        return {"message": f"Error: {status}"}
-    
-    # 🎯 GUARDAMOS LA CARA CRUDA (Los 10,000 píxeles)
+    # GUARDAMOS CRUDO PARA EVITAR AMNESIA
     vector_crudo = rostro.flatten().tolist()
-
-    nuevo_usuario = UsuarioRostro(
-        nombre=nombre.upper(),
-        vector_pesos=json.dumps(vector_crudo)
-    )
+    nuevo_usuario = UsuarioRostro(nombre=nombre.upper(), vector_pesos=json.dumps(vector_crudo))
     db.add(nuevo_usuario)
     db.commit()
     
-    # Reentrenamos para que el motor asimile al nuevo compa
     entrenar_motor_desde_db(db)
-    
     return {"message": f"{nombre} matriculado. Motor actualizado."}
 
 @app.post("/api/identificar")
 async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db)):
     entrenar_motor_desde_db(db)
-    
-    # Si Render se reinició y hay menos de 2 personas, el motor no puede operar
     if pca.weights is None or pca.mean_face is None:
-        return {"nombre": "FALTAN_DATOS_O_DB_VACIA", "confianza": 0}
+        return {"nombre": "FALTAN_DATOS", "confianza": 0}
 
     contents = await file.read()
     rostro, status = cazar_cara(contents)
     if status != "OK": return {"nombre": status, "confianza": 0}
 
-    # Proceso de comparación (Similitud del Coseno)
     vector = rostro.flatten()
     centered = vector - pca.mean_face
     projection = np.dot(centered, pca.eigenfaces.T)
@@ -193,7 +153,6 @@ async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db
     umbral = 0.85
     idx_max = np.argmax(similitudes)
     sim_max = similitudes[idx_max]
-    
     conf_mapeada = round(((sim_max - umbral) / (1.0 - umbral)) * 100, 2) if sim_max > umbral else 0
 
     return {
@@ -203,7 +162,7 @@ async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db
 
 @app.delete("/api/borrar_todo")
 async def borrar_db(clave: str, db: Session = Depends(get_db)):
-    if clave == "RoroAdmin123": # Tu clave secreta
+    if clave == "RoroAdmin123":
         db.query(UsuarioRostro).delete()
         db.commit()
         entrenar_motor_desde_db(db)
