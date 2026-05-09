@@ -206,7 +206,7 @@ async function borrarRostro(event, nombre) {
         const nombreSeguro = encodeURIComponent(nombre);
         
         // 3. Mandar la petición con el nombre limpio
-        const res = await fetch(`http://127.0.0.1:8000/api/borrar/${nombreSeguro}`, { method: 'DELETE' });
+        const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar/${nombreSeguro}`, { method: 'DELETE' });
         const data = await res.json();
         
         terminal.innerHTML += `> [SYS] ${data.message}<br>`;
@@ -226,7 +226,7 @@ async function borrarRostro(event, nombre) {
         // 3. ACTUALIZAR ESTADO (Ahora con botones de borrar)
 async function actualizarEstadoMotor() {
     try {
-        const res = await fetch('http://127.0.0.1:8000/api/estado');
+        const res = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/estado');
         const data = await res.json();
         
         const badge = document.getElementById('badgeEstado');
@@ -290,7 +290,7 @@ async function actualizarEstadoMotor() {
             const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
             
             const formData = new FormData(); formData.append('file', blob);
-            const res = await fetch(`http://127.0.0.1:8000/api/registrar?nombre=${nombre}`, { method: 'POST', body: formData });
+            const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/registrar?nombre=${nombre}`, { method: 'POST', body: formData });
             const data = await res.json();
             terminal.innerHTML += `> [SYS] ${data.message}<br>`;
             document.getElementById('nombreRegistro').value = "";
@@ -310,7 +310,7 @@ async function actualizarEstadoMotor() {
 
             try {
                 const formData = new FormData(); formData.append('file', blob);
-                const response = await fetch('http://127.0.0.1:8000/api/identificar', { method: 'POST', body: formData });
+                const response = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/identificar', { method: 'POST', body: formData });
                 const data = await response.json();
 
                 setTimeout(() => {
