@@ -136,24 +136,27 @@ async def registrar(nombre: str, file: UploadFile = File(...), db: Session = Dep
     vector = rostro.flatten()
     
     # Si es el primer registro, inicializamos el PCA con una cara base
-    if pca.mean_face is None:
-        # En un sistema real, aquí harías un .fit() inicial.
-        # Por ahora, simulamos la proyección:
-        return {"message": "El motor necesita un entrenamiento inicial con datos base."}
+    if pca.mean_face is not None:
+        centered = vector - pca.mean_face
+        projection = np.dot(centered, pca.eigenfaces.T)
+        pesos_finales = projection.tolist()
+    else:
+        # Es el primerito: guardamos el vector de la cara tal cual (aplanado)
+        # para que el motor tenga de dónde aprender después.
+        pesos_finales = vector.tolist()
 
-    centered = vector - pca.mean_face
-    projection = np.dot(centered, pca.eigenfaces.T)
-    
-    # Guardar en TiDB
+    # Ahora sí, guardamos en TiDB sin miedos
     nuevo_usuario = UsuarioRostro(
         nombre=nombre.upper(),
-        vector_pesos=json.dumps(projection.tolist())
+        vector_pesos=json.dumps(pesos_finales)
     )
     db.add(nuevo_usuario)
     db.commit()
     
+    # 🚀 REENTRENAMOS: Ahora que hay datos, el motor se actualiza solo
     entrenar_motor_desde_db(db)
-    return {"message": f"{nombre} guardado en la nube con éxito."}
+    
+    return {"message": f"{nombre} matriculado. El motor se está actualizando..."}
 
 @app.post("/api/identificar")
 async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db)):
