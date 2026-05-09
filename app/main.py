@@ -83,18 +83,39 @@ def entrenar_motor_desde_db(db: Session):
 
 # --- 📸 PROCESAMIENTO DE IMAGEN ---
 
+# --- 📸 PROCESAMIENTO DE IMAGEN ---
+
 def cazar_cara(imagen_bytes):
+    # 1. Ver si el radar (XML) se quedó en coma en el servidor
+    if face_cascade.empty():
+        return None, "RADAR_MUERTO"
+
+    # 2. Decodificar los bytes que manda el JS
     nparr = np.frombuffer(imagen_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    
+    if img is None:
+        return None, "FOTO_CORRUPTA"
+        
     gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
-    if np.mean(gris) < 30: return None, "OSCURIDAD"
+    # 🌟 EL HACK DEL TESO: Ecualizar el histograma.
+    # Esto fuerza los contrastes y hace que OpenCV no se ponga de nena con las sombras.
+    gris = cv2.equalizeHist(gris)
+    
+    if np.mean(gris) < 20: 
+        return None, "OSCURIDAD"
         
-    caras = face_cascade.detectMultiScale(gris, 1.1, 5, minSize=(60, 60))
-    if len(caras) == 0: return None, "NO_CARA"
+    # 3. Buscar la cara (Bajé la exigencia del scaleFactor pa' que detecte más fácil)
+    caras = face_cascade.detectMultiScale(gris, scaleFactor=1.15, minNeighbors=4, minSize=(60, 60))
+    
+    if len(caras) == 0: 
+        return None, "NO_CARA"
         
+    # 4. Recortar la pepa de la cara más grande
     (x, y, w, h) = max(caras, key=lambda rect: rect[2] * rect[3])
     rostro = cv2.resize(gris[y:y+h, x:x+w], (100, 100))
+    
     return rostro, "OK"
 
 # --- 🚀 ENDPOINTS ---
