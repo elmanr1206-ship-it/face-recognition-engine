@@ -312,15 +312,13 @@ async function actualizarEstadoMotor() {
         }
 
 async function capturarYPredecir() {
-    // 1. Target Lock: Ponemos la mira en la cámara
-    const mira = document.createElement('div');
-    mira.className = "absolute inset-0 m-auto w-48 h-48 target-lock rounded-3xl z-50 pointer-events-none";
-    document.getElementById('webcam').parentElement.appendChild(mira);
+    // Ya no hay mira láser cuadrada xd, solo activamos la línea de escaneo
     document.getElementById('scanLine').classList.remove('hidden');
-    
     terminal.innerHTML = '> [SCAN] Aislando biometría facial...<br>';
     
-    const canvas = document.createElement('canvas'); canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+    const canvas = document.createElement('canvas'); 
+    canvas.width = video.videoWidth; 
+    canvas.height = video.videoHeight;
     canvas.getContext('2d').drawImage(video, 0, 0);
     const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
     
@@ -329,8 +327,7 @@ async function capturarYPredecir() {
         const response = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/identificar', { method: 'POST', body: formData });
         const data = await response.json();
 
-        // 2. Quitamos la mira
-        mira.remove();
+        // Apagamos la línea láser
         document.getElementById('scanLine').classList.add('hidden');
 
         if(data.nombre === "FALTAN_DATOS" || data.nombre === "NO_CARA") {
@@ -338,7 +335,7 @@ async function capturarYPredecir() {
             return;
         }
 
-        // 3. Imprimir el Álgebra REAL en la terminal paso a paso
+        // Imprimir el Álgebra REAL en la terminal paso a paso
         terminal.innerHTML += '> [MATH] Restando Cara Promedio (Φ = Γ - Ψ)...<br>';
         terminal.innerHTML += '> [PCA] Proyectando en subespacio Eigen (Ω)...<br>';
         
@@ -354,10 +351,10 @@ async function capturarYPredecir() {
                 terminal.scrollTop = terminal.scrollHeight;
                 i += 4;
             }
-        }, 150); // Se demora un poquito pa' que se vea el "cálculo"
+        }, 150);
 
     } catch (err) {
-        mira.remove();
+        document.getElementById('scanLine').classList.add('hidden');
         terminal.innerHTML += '<span class="text-red-500">> [ERROR] Kernel Panic. Servidor caído.</span><br>';
     }
 }
