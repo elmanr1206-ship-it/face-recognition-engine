@@ -101,8 +101,11 @@ def cazar_cara(imagen_bytes):
 
 @app.get("/")
 async def read_index():
-    # Esto busca el archivo en la raíz del proyecto
-    return FileResponse('index.html')
+    # Buscamos la ruta absoluta para que no se pierda
+    path = os.path.join(os.getcwd(), "index.html")
+    if os.path.exists(path):
+        return FileResponse(path)
+    return {"error": "No encontré el index.html en el servidor"}
 
 @app.on_event("startup")
 async def startup_event():
