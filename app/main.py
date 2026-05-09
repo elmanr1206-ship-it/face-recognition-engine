@@ -59,29 +59,30 @@ face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_fronta
 # --- 🧠 LÓGICA DE MOTOR CON BASE DE DATOS ---
 
 def entrenar_motor_desde_db(db: Session):
-    """Carga los pesos de la DB al motor PCA sin usar archivos locales."""
+    """Carga TODAS las caras crudas y revive el motor PCA desde cero."""
     global nombres_db
     registros = db.query(UsuarioRostro).all()
     
-    if not registros:
+    # El álgebra necesita mínimo 2 personas para no estallarse
+    if len(registros) < 2:
+        pca.mean_face = None
+        pca.eigenfaces = None
         pca.weights = None
-        nombres_db = []
+        nombres_db = [r.nombre for r in registros]
         return False
 
-    all_weights = []
+    all_raw_faces = []
     nombres_db = []
     
     for r in registros:
         nombres_db.append(r.nombre)
-        # Convertimos el string JSON de vuelta a array de numpy
-        all_weights.append(json.loads(r.vector_pesos))
+        # Cargamos los 10,000 pixeles originales
+        all_raw_faces.append(json.loads(r.vector_pesos))
     
-    pca.weights = np.array(all_weights)
-    # Nota: El mean_face y eigenfaces deben estar cargados o calculados previamente.
-    # Para simplificar en la nube, el primer entrenamiento "fit" es vital.
+    # 🌟 LA MAGIA: Entrenamos el PCA desde cero con las caras puras
+    X = np.array(all_raw_faces)
+    pca.fit(X) 
     return True
-
-# --- 📸 PROCESAMIENTO DE IMAGEN ---
 
 # --- 📸 PROCESAMIENTO DE IMAGEN ---
 
@@ -153,39 +154,28 @@ async def registrar(nombre: str, file: UploadFile = File(...), db: Session = Dep
     if status != "OK":
         return {"message": f"Error: {status}"}
     
-    # 🎯 PROYECCIÓN: Convertimos la cara en 20 números (Pesos)
-    vector = rostro.flatten()
-    
-    # Si es el primer registro, inicializamos el PCA con una cara base
-    if pca.mean_face is not None:
-        centered = vector - pca.mean_face
-        projection = np.dot(centered, pca.eigenfaces.T)
-        pesos_finales = projection.tolist()
-    else:
-        # Es el primerito: guardamos el vector de la cara tal cual (aplanado)
-        # para que el motor tenga de dónde aprender después.
-        pesos_finales = vector.tolist()
+    # 🎯 GUARDAMOS LA CARA CRUDA (Los 10,000 píxeles)
+    vector_crudo = rostro.flatten().tolist()
 
-    # Ahora sí, guardamos en TiDB sin miedos
     nuevo_usuario = UsuarioRostro(
         nombre=nombre.upper(),
-        vector_pesos=json.dumps(pesos_finales)
+        vector_pesos=json.dumps(vector_crudo)
     )
     db.add(nuevo_usuario)
     db.commit()
     
-    # 🚀 REENTRENAMOS: Ahora que hay datos, el motor se actualiza solo
+    # Reentrenamos para que el motor asimile al nuevo compa
     entrenar_motor_desde_db(db)
     
-    return {"message": f"{nombre} matriculado. El motor se está actualizando..."}
+    return {"message": f"{nombre} matriculado. Motor actualizado."}
 
 @app.post("/api/identificar")
 async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db)):
-    # Siempre refrescamos el motor para tener lo último de la DB
     entrenar_motor_desde_db(db)
     
-    if not nombres_db or pca.weights is None:
-        return {"nombre": "DB VACÍA", "confianza": 0}
+    # Si Render se reinició y hay menos de 2 personas, el motor no puede operar
+    if pca.weights is None or pca.mean_face is None:
+        return {"nombre": "FALTAN_DATOS_O_DB_VACIA", "confianza": 0}
 
     contents = await file.read()
     rostro, status = cazar_cara(contents)
