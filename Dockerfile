@@ -1,9 +1,10 @@
 # Usamos una versión de Python liviana
 FROM python:3.11-slim
 
-# Instalamos las librerías de Linux que OpenCV necesita para no estallar
+# Instalamos las dependencias de sistema para OpenCV
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx libglib2.0-0 \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Definimos dónde va a vivir el código en el servidor
