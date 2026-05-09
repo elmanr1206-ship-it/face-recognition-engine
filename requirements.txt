@@ -6,3 +6,4 @@ cryptography
 opencv-python-headless
 numpy
 scikit-learn
+python-multipart
