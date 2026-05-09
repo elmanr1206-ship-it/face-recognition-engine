@@ -6,6 +6,7 @@ import json
 import os
 from sqlalchemy import create_engine
 from fastapi import FastAPI, UploadFile, File, Depends
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, Column, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
@@ -97,6 +98,11 @@ def cazar_cara(imagen_bytes):
     return rostro, "OK"
 
 # --- 🚀 ENDPOINTS ---
+
+@app.get("/")
+async def read_index():
+    # Esto busca el archivo en la raíz del proyecto
+    return FileResponse('index.html')
 
 @app.on_event("startup")
 async def startup_event():
