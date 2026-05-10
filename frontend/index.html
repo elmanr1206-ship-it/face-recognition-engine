@@ -165,21 +165,20 @@
             document.getElementById('debugPanelWrapper').classList.toggle('open');
         }
 
-        async function borrarRostro(event, nombre) {
-            event.preventDefault(); 
-            if(!confirm(`¿Seguro que quieres borrar la identidad de ${nombre}?`)) return;
-            
-            terminal.innerHTML += `> [SYS] Iniciando borrado de ${nombre}...<br>`;
-            try {
-                const nombreSeguro = encodeURIComponent(nombre);
-                const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar_todo?clave=RoroAdmin123`, { method: 'DELETE' }); // Cuidado: borra todo en tu código actual si usas esta ruta general
-                const data = await res.json();
-                terminal.innerHTML += `> [SYS] ${data.message}<br>`;
-                actualizarEstadoMotor();
-            } catch(e) {
-                terminal.innerHTML += `> [ERROR] Servidor no responde.<br>`;
-            }
-        }
+async function borrarRostro(event, nombre) {
+    event.preventDefault(); 
+    if(!confirm(`¿Mandamos a ${nombre} al lobby?`)) return;
+    
+    terminal.innerHTML += `> [SYS] Borrando a ${nombre}...<br>`;
+    try {
+        const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar/${encodeURIComponent(nombre)}`, { method: 'DELETE' });
+        const data = await res.json();
+        terminal.innerHTML += `> [SYS] ${data.message}<br>`;
+        actualizarEstadoMotor();
+    } catch(e) {
+        terminal.innerHTML += `> [ERROR] El servidor ignoró la orden.<br>`;
+    }
+}
 
         async function actualizarEstadoMotor() {
             try {
@@ -290,69 +289,68 @@
             }
         }
 
-        function mostrarResultados(data) {
-            podioDistancias.innerHTML = '';
-            data.top_3.forEach((m, i) => {
-               let colorBarra = i === 0 ? 'bg-cyan-400' : 'bg-gray-700';
-               let glow = i === 0 ? 'box-shadow: 0 0 12px #22d3ee;' : '';
-               
-               podioDistancias.innerHTML += `
-                  <div class="mb-4">
-                     <div class="flex justify-between text-[11px] mb-1.5 font-mono uppercase tracking-widest">
-                        <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
-                            <i class="fa-solid ${i===0 ? 'fa-crosshairs' : 'fa-user'} mr-1"></i> ${m.nombre}
-                        </span>
-                        <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-600'}">${m.distancia}% MATCH</span>
-                     </div>
-                     <div class="w-full bg-black/60 rounded-full h-2 border border-white/5 overflow-hidden">
-                        <div class="${colorBarra} h-full rounded-full transition-all duration-[1500ms] ease-out" 
-                             style="width: 0%; ${glow}" data-width="${m.distancia}%"></div>
-                     </div>
-                  </div>`;
-            });
+// Variable global para guardar el gráfico y que no se superpongan
+let miRadar; 
 
-            setTimeout(() => {
-                const barras = podioDistancias.querySelectorAll('[data-width]');
-                barras.forEach(b => b.style.width = b.getAttribute('data-width'));
-            }, 50);
+function mostrarResultados(data) {
+    // ... (deja el código de podioDistancias y terminal que ya tienes arriba) ...
 
-            document.getElementById('infoMatch').classList.remove('hidden');
-            document.getElementById('nombreMatch').innerText = data.nombre;
-            document.getElementById('confianzaMatch').innerText = `${data.confianza}% CONFIDENCE`;
-            document.getElementById('statusLabel').innerText = "IDENTIFIED";
+    // 🧬 1. DIBUJAR RADAR DE STATS RPG (LA FIRMA VECTORIAL PRO)
+    const ctx = document.getElementById('radarChart').getContext('2d');
+    
+    // Si ya existía un gráfico de una escaneada anterior, lo destruimos
+    if (miRadar) miRadar.destroy();
 
-            // 🧬 DIBUJAR CÓDIGO DE BARRAS BIOMÉTRICO
-            const maxAbs = Math.max(...data.pesos_reales.map(Math.abs));
-            const contenedorFirma = document.getElementById('firmaVectorial');
-            contenedorFirma.innerHTML = '';
-            
-            data.pesos_reales.forEach(peso => {
-                const intensidad = maxAbs === 0 ? 0 : Math.abs(peso) / maxAbs;
-                const colorRGB = peso > 0 ? '6, 182, 212' : '255, 0, 60'; 
-                contenedorFirma.innerHTML += `
-                    <div class="flex-1 h-full transition-all duration-500" 
-                         style="background-color: rgba(${colorRGB}, ${intensidad}); 
-                                box-shadow: 0 0 10px rgba(${colorRGB}, ${intensidad * 0.5});">
-                    </div>
-                `;
-            });
+    // Generamos etiquetas falsas de dimensiones (Ω1, Ω2, etc)
+    const labels = data.pesos_reales.map((_, i) => `Ω${i+1}`);
 
-            // 👻 MOSTRAR EL MONSTRUO (RECONSTRUCCIÓN DE PLAY 1)
-            if (data.rostro_reconstruido) {
-                const imgElement = document.getElementById('caraProcesada');
-                imgElement.src = `data:image/jpeg;base64,${data.rostro_reconstruido}`;
-                imgElement.classList.remove('hidden');
-                
-                imgElement.classList.remove('ghost-reveal'); 
-                void imgElement.offsetWidth; 
-                imgElement.classList.add('ghost-reveal');
-                
-                document.getElementById('placeholderImg').classList.add('hidden');
-            }
-            
-            terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
-            terminal.scrollTop = terminal.scrollHeight;
+    miRadar = new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Firma Biométrica',
+                data: data.pesos_reales,
+                backgroundColor: 'rgba(6, 182, 212, 0.2)', // Fondo Cyan transparente
+                borderColor: 'rgba(6, 182, 212, 1)', // Borde Cyan neón
+                pointBackgroundColor: 'rgba(255, 0, 60, 1)', // Puntos rojos
+                pointBorderColor: '#fff',
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            scales: { r: { 
+                grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                pointLabels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+                ticks: { display: false } // Oculta los números del centro para que se vea limpio
+            }},
+            plugins: { legend: { display: false } },
+            maintainAspectRatio: false
         }
+    });
+
+    // 👻 2. MOSTRAR EL MONSTRUO CON EFECTO GLITCH
+    if (data.rostro_reconstruido) {
+        const imgElement = document.getElementById('caraProcesada');
+        imgElement.src = `data:image/jpeg;base64,${data.rostro_reconstruido}`;
+        imgElement.classList.remove('hidden');
+        
+        // Le metemos el glitch frenético
+        imgElement.classList.add('glitch-anim');
+        document.getElementById('placeholderImg').classList.add('hidden');
+
+        // Se lo quitamos al medio segundo para que parezca que "estabilizó" la conexión
+        setTimeout(() => {
+            imgElement.classList.remove('glitch-anim');
+            // Y le dejamos el invertido tétrico
+            imgElement.classList.add('ghost-reveal');
+        }, 600);
+    }
+    
+    terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
+    terminal.scrollTop = terminal.scrollHeight;
+}
     </script>
 </body>
 </html>

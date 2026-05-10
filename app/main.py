@@ -69,11 +69,13 @@ def cazar_cara(imagen_bytes):
     if img is None: return None, "FOTO_CORRUPTA"
     
     gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gris = cv2.equalizeHist(gris) 
     
-    if np.mean(gris) < 20: return None, "OSCURIDAD"
+    # HACK 2.0: Solo ecualiza si de verdad está muy oscuro
+    if np.mean(gris) < 40: 
+        gris = cv2.equalizeHist(gris) 
         
-    caras = face_cascade.detectMultiScale(gris, scaleFactor=1.15, minNeighbors=4, minSize=(60, 60))
+    # Le bajamos lo estricto al radar (scaleFactor 1.1 y minNeighbors 3)
+    caras = face_cascade.detectMultiScale(gris, scaleFactor=1.1, minNeighbors=3, minSize=(50, 50))
     if len(caras) == 0: return None, "NO_CARA"
         
     (x, y, w, h) = max(caras, key=lambda rect: rect[2] * rect[3])
@@ -178,11 +180,10 @@ async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db
         "rostro_reconstruido": recon_b64
     }
 
-@app.delete("/api/borrar_todo")
-async def borrar_db(clave: str, db: Session = Depends(get_db)):
-    if clave == "RoroAdmin123":
-        db.query(UsuarioRostro).delete()
-        db.commit()
-        entrenar_motor_desde_db(db)
-        return {"message": "Base de datos limpia, jefe."}
-    return {"message": "No eres el admin xd"}
+@app.delete("/api/borrar/{nombre}")
+async def borrar_usuario(nombre: str, db: Session = Depends(get_db)):
+    # Busca al man por el nombre y lo manda pa'l lobby
+    db.query(UsuarioRostro).filter(UsuarioRostro.nombre == nombre).delete()
+    db.commit()
+    entrenar_motor_desde_db(db)
+    return {"message": f"Identidad de {nombre} purgada del sistema."}
