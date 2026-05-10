@@ -5,6 +5,7 @@
     <title>FaceID Engine Pro v3.5 - Unimagdalena</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
         
@@ -27,6 +28,17 @@
         /* Magia oscura para la foto reconstruida */
         .ghost-reveal { filter: invert(1) contrast(150%) brightness(50%); animation: revealGhost 2s forwards ease-in-out; }
         @keyframes revealGhost { 100% { filter: invert(0) contrast(100%) brightness(100%); } }
+        
+        /* Efecto Glitch Hacker */
+        .glitch-anim { animation: glitch 0.4s cubic-bezier(.25, .46, .45, .94) both infinite; }
+        @keyframes glitch {
+            0% { transform: translate(0) }
+            20% { transform: translate(-2px, 2px) }
+            40% { transform: translate(-2px, -2px) }
+            60% { transform: translate(2px, 2px) }
+            80% { transform: translate(2px, -2px) }
+            100% { transform: translate(0) }
+        }
     </style>
 </head>
 <body class="text-white flex flex-col items-center p-8">
@@ -50,9 +62,6 @@
             <div class="relative glass rounded-3xl overflow-hidden shadow-2xl border-2 border-cyan-500/20">
                 <video id="webcam" autoplay playsinline class="w-full h-[450px] object-cover transform -scale-x-100"></video>
                 <div id="scanLine" class="absolute left-0 right-0 top-0 scan-line hidden"></div>
-                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="w-64 h-80 border-2 border-dashed border-cyan-400/40 rounded-[120px] relative"></div>
-                </div>
             </div>
 
             <div class="glass p-6 rounded-3xl flex gap-4 items-center">
@@ -125,8 +134,10 @@
                                 <i class="fa-solid fa-microchip text-4xl"></i>
                             </div>
                         </div>
-                        <h3 class="text-gray-400 uppercase text-[10px] tracking-widest mb-2">Firma Vectorial (Ω)</h3>
-                        <div id="firmaVectorial" class="flex w-full h-4 gap-1 rounded overflow-hidden"></div>
+                        <h3 class="text-gray-400 uppercase text-[10px] tracking-widest mb-2 text-center">Firma Vectorial (Ω)</h3>
+                        <div class="relative w-full h-40 flex justify-center items-center mt-2">
+                            <canvas id="radarChart"></canvas>
+                        </div>
                     </div>
 
                     <div class="glass p-6 rounded-2xl md:col-span-3 border border-cyan-500/10">
@@ -157,6 +168,7 @@
         const terminal = document.getElementById('terminalLogs');
         const podioDistancias = document.getElementById('podioDistancias');
         const listaNombresContenedor = document.getElementById('listaNombresContenedor');
+        let miRadar; // Variable global para el radar
 
         navigator.mediaDevices.getUserMedia({ video: true }).then(stream => video.srcObject = stream);
         actualizarEstadoMotor();
@@ -165,20 +177,20 @@
             document.getElementById('debugPanelWrapper').classList.toggle('open');
         }
 
-async function borrarRostro(event, nombre) {
-    event.preventDefault(); 
-    if(!confirm(`¿Mandamos a ${nombre} al lobby?`)) return;
-    
-    terminal.innerHTML += `> [SYS] Borrando a ${nombre}...<br>`;
-    try {
-        const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar/${encodeURIComponent(nombre)}`, { method: 'DELETE' });
-        const data = await res.json();
-        terminal.innerHTML += `> [SYS] ${data.message}<br>`;
-        actualizarEstadoMotor();
-    } catch(e) {
-        terminal.innerHTML += `> [ERROR] El servidor ignoró la orden.<br>`;
-    }
-}
+        async function borrarRostro(event, nombre) {
+            event.preventDefault(); 
+            if(!confirm(`¿Mandamos a ${nombre} al lobby?`)) return;
+            
+            terminal.innerHTML += `> [SYS] Borrando a ${nombre}...<br>`;
+            try {
+                const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar/${encodeURIComponent(nombre)}`, { method: 'DELETE' });
+                const data = await res.json();
+                terminal.innerHTML += `> [SYS] ${data.message}<br>`;
+                actualizarEstadoMotor();
+            } catch(e) {
+                terminal.innerHTML += `> [ERROR] El servidor ignoró la orden.<br>`;
+            }
+        }
 
         async function actualizarEstadoMotor() {
             try {
@@ -186,10 +198,9 @@ async function borrarRostro(event, nombre) {
                 const data = await res.json();
                 
                 const badge = document.getElementById('badgeEstado');
-                const listaNombresContenedor = document.getElementById('listaNombresContenedor');
                 const galeria = document.getElementById('galeriaEigenfaces');
 
-                listaNombresContenedor.innerHTML = '';
+                document.getElementById('listaNombresContenedor').innerHTML = '';
                 galeria.innerHTML = ''; 
 
                 if (data.status === 'ready') {
@@ -202,9 +213,12 @@ async function borrarRostro(event, nombre) {
                     badge.className = "px-2 py-1 bg-green-500/20 text-green-400 rounded text-[10px] font-mono";
 
                     data.nombres.forEach(nombre => {
-                        listaNombresContenedor.innerHTML += `
+                        document.getElementById('listaNombresContenedor').innerHTML += `
                             <div class="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300">
                                 <span>${nombre}</span>
+                                <button type="button" onclick="borrarRostro(event, '${nombre}')" class="text-red-400 hover:text-red-300 transition-all">
+                                    <i class="fa-solid fa-circle-xmark"></i>
+                                </button>
                             </div>`;
                     });
 
@@ -220,8 +234,10 @@ async function borrarRostro(event, nombre) {
                     }
                 } else {
                     document.getElementById('numRostros').innerText = '0';
-                    listaNombresContenedor.innerHTML = '<span class="text-xs text-gray-500 italic">Sin datos</span>';
+                    document.getElementById('listaNombresContenedor').innerHTML = '<span class="text-xs text-gray-500 italic">Sin datos</span>';
                     galeria.innerHTML = '<p class="text-gray-700 text-xs">Dataset insuficiente para generar bases.</p>';
+                    document.getElementById('imgPromedio').classList.add('hidden');
+                    document.getElementById('iconVacio').classList.remove('hidden');
                 }
             } catch (e) {
                 console.error(e);
@@ -289,68 +305,86 @@ async function borrarRostro(event, nombre) {
             }
         }
 
-// Variable global para guardar el gráfico y que no se superpongan
-let miRadar; 
+        function mostrarResultados(data) {
+            podioDistancias.innerHTML = '';
+            data.top_3.forEach((m, i) => {
+               let colorBarra = i === 0 ? 'bg-cyan-400' : 'bg-gray-700';
+               let glow = i === 0 ? 'box-shadow: 0 0 12px #22d3ee;' : '';
+               
+               podioDistancias.innerHTML += `
+                  <div class="mb-4">
+                     <div class="flex justify-between text-[11px] mb-1.5 font-mono uppercase tracking-widest">
+                        <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
+                            <i class="fa-solid ${i===0 ? 'fa-crosshairs' : 'fa-user'} mr-1"></i> ${m.nombre}
+                        </span>
+                        <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-600'}">${m.distancia}% MATCH</span>
+                     </div>
+                     <div class="w-full bg-black/60 rounded-full h-2 border border-white/5 overflow-hidden">
+                        <div class="${colorBarra} h-full rounded-full transition-all duration-[1500ms] ease-out" 
+                             style="width: 0%; ${glow}" data-width="${m.distancia}%"></div>
+                     </div>
+                  </div>`;
+            });
 
-function mostrarResultados(data) {
-    // ... (deja el código de podioDistancias y terminal que ya tienes arriba) ...
+            setTimeout(() => {
+                const barras = podioDistancias.querySelectorAll('[data-width]');
+                barras.forEach(b => b.style.width = b.getAttribute('data-width'));
+            }, 50);
 
-    // 🧬 1. DIBUJAR RADAR DE STATS RPG (LA FIRMA VECTORIAL PRO)
-    const ctx = document.getElementById('radarChart').getContext('2d');
-    
-    // Si ya existía un gráfico de una escaneada anterior, lo destruimos
-    if (miRadar) miRadar.destroy();
+            document.getElementById('infoMatch').classList.remove('hidden');
+            document.getElementById('nombreMatch').innerText = data.nombre;
+            document.getElementById('confianzaMatch').innerText = `${data.confianza}% CONFIDENCE`;
+            document.getElementById('statusLabel').innerText = "IDENTIFIED";
 
-    // Generamos etiquetas falsas de dimensiones (Ω1, Ω2, etc)
-    const labels = data.pesos_reales.map((_, i) => `Ω${i+1}`);
+            // 🧬 DIBUJAR RADAR DE STATS
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            if (miRadar) miRadar.destroy();
 
-    miRadar = new Chart(ctx, {
-        type: 'radar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Firma Biométrica',
-                data: data.pesos_reales,
-                backgroundColor: 'rgba(6, 182, 212, 0.2)', // Fondo Cyan transparente
-                borderColor: 'rgba(6, 182, 212, 1)', // Borde Cyan neón
-                pointBackgroundColor: 'rgba(255, 0, 60, 1)', // Puntos rojos
-                pointBorderColor: '#fff',
-                borderWidth: 2,
-            }]
-        },
-        options: {
-            scales: { r: { 
-                grid: { color: 'rgba(255, 255, 255, 0.1)' },
-                angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
-                pointLabels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
-                ticks: { display: false } // Oculta los números del centro para que se vea limpio
-            }},
-            plugins: { legend: { display: false } },
-            maintainAspectRatio: false
+            const labels = data.pesos_reales.map((_, i) => `Ω${i+1}`);
+            miRadar = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Firma Biométrica',
+                        data: data.pesos_reales,
+                        backgroundColor: 'rgba(6, 182, 212, 0.2)', 
+                        borderColor: 'rgba(6, 182, 212, 1)', 
+                        pointBackgroundColor: 'rgba(255, 0, 60, 1)', 
+                        pointBorderColor: '#fff',
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    scales: { r: { 
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        angleLines: { color: 'rgba(255, 255, 255, 0.1)' },
+                        pointLabels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 10 } },
+                        ticks: { display: false } 
+                    }},
+                    plugins: { legend: { display: false } },
+                    maintainAspectRatio: false
+                }
+            });
+
+            // 👻 MOSTRAR EL MONSTRUO CON GLITCH
+            if (data.rostro_reconstruido) {
+                const imgElement = document.getElementById('caraProcesada');
+                imgElement.src = `data:image/jpeg;base64,${data.rostro_reconstruido}`;
+                imgElement.classList.remove('hidden');
+                
+                imgElement.classList.add('glitch-anim');
+                document.getElementById('placeholderImg').classList.add('hidden');
+
+                setTimeout(() => {
+                    imgElement.classList.remove('glitch-anim');
+                    imgElement.classList.add('ghost-reveal');
+                }, 600);
+            }
+            
+            terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
+            terminal.scrollTop = terminal.scrollHeight;
         }
-    });
-
-    // 👻 2. MOSTRAR EL MONSTRUO CON EFECTO GLITCH
-    if (data.rostro_reconstruido) {
-        const imgElement = document.getElementById('caraProcesada');
-        imgElement.src = `data:image/jpeg;base64,${data.rostro_reconstruido}`;
-        imgElement.classList.remove('hidden');
-        
-        // Le metemos el glitch frenético
-        imgElement.classList.add('glitch-anim');
-        document.getElementById('placeholderImg').classList.add('hidden');
-
-        // Se lo quitamos al medio segundo para que parezca que "estabilizó" la conexión
-        setTimeout(() => {
-            imgElement.classList.remove('glitch-anim');
-            // Y le dejamos el invertido tétrico
-            imgElement.classList.add('ghost-reveal');
-        }, 600);
-    }
-    
-    terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
-    terminal.scrollTop = terminal.scrollHeight;
-}
     </script>
 </body>
 </html>
