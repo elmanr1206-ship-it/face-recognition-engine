@@ -8,42 +8,11 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Urbanist:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
         
-        .ghost-reveal {
-    filter: invert(1) contrast(150%) brightness(50%);
-    animation: revealGhost 2s forwards ease-in-out;
-    }
-    @keyframes revealGhost {
-        100% { filter: invert(0) contrast(100%) brightness(100%); }
-    }
-    .target-lock {
-        box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5), inset 0 0 20px #06b6d4;
-        border: 2px solid #06b6d4;
-        animation: lockIn 0.5s infinite alternate;
-    }
-    @keyframes lockIn { 100% { border-color: #ff003c; transform: scale(0.95); } }
-
-        body {
-            font-family: 'Urbanist', sans-serif;
-            background: radial-gradient(circle at top right, #0f172a, #000);
-            min-height: 100vh;
-        }
-
-        .glass {
-            background: rgba(255, 255, 255, 0.03);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .scan-line {
-            height: 4px;
-            background: linear-gradient(to right, transparent, #06b6d4, transparent);
-            box-shadow: 0 0 15px #06b6d4;
-            animation: scan 3s infinite ease-in-out;
-        }
-
+        body { font-family: 'Urbanist', sans-serif; background: radial-gradient(circle at top right, #0f172a, #000); min-height: 100vh; }
+        .glass { background: rgba(255, 255, 255, 0.03); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .scan-line { height: 4px; background: linear-gradient(to right, transparent, #06b6d4, transparent); box-shadow: 0 0 15px #06b6d4; animation: scan 3s infinite ease-in-out; }
         @keyframes scan { 0%, 100% { top: 0; } 50% { top: 100%; } }
 
-        /* Estilo Apple Toggle */
         .switch { position: relative; display: inline-block; width: 50px; height: 28px; }
         .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .4s; border-radius: 34px; }
@@ -51,20 +20,13 @@
         input:checked + .slider { background-color: #06b6d4; }
         input:checked + .slider:before { transform: translateX(22px); }
 
-        /* TRANSICIÓN FLUIDA MODO DIOS */
-        #debugPanelWrapper {
-            display: grid;
-            grid-template-rows: 0fr; /* Empieza colapsado */
-            transition: grid-template-rows 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-            width: 100%;
-            max-width: 80rem;
-        }
-        #debugPanelWrapper.open {
-            grid-template-rows: 1fr; /* Se expande suavemente */
-        }
-        #debugPanelInner {
-            overflow: hidden; /* Oculta el contenido mientras está colapsado */
-        }
+        #debugPanelWrapper { display: grid; grid-template-rows: 0fr; transition: grid-template-rows 0.6s cubic-bezier(0.4, 0, 0.2, 1); width: 100%; max-width: 80rem; }
+        #debugPanelWrapper.open { grid-template-rows: 1fr; }
+        #debugPanelInner { overflow: hidden; }
+
+        /* Magia oscura para la foto reconstruida */
+        .ghost-reveal { filter: invert(1) contrast(150%) brightness(50%); animation: revealGhost 2s forwards ease-in-out; }
+        @keyframes revealGhost { 100% { filter: invert(0) contrast(100%) brightness(100%); } }
     </style>
 </head>
 <body class="text-white flex flex-col items-center p-8">
@@ -84,7 +46,6 @@
     </header>
 
     <main class="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-        
         <div class="lg:col-span-2 space-y-6">
             <div class="relative glass rounded-3xl overflow-hidden shadow-2xl border-2 border-cyan-500/20">
                 <video id="webcam" autoplay playsinline class="w-full h-[450px] object-cover transform -scale-x-100"></video>
@@ -137,7 +98,6 @@
                 <h2 class="text-2xl font-bold text-cyan-400 border-b border-cyan-500/20 pb-4">Dev Mode: Algebraic Pipeline</h2>
                 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    
                     <div class="glass p-5 rounded-2xl md:col-span-1">
                         <div class="flex justify-between items-center mb-3">
                             <h3 class="text-gray-400 uppercase text-xs tracking-widest">Dataset (Ψ)</h3>
@@ -154,18 +114,19 @@
                                 <p class="text-gray-300">Vectores: <strong id="numRostros" class="text-cyan-400 text-lg">0</strong></p>
                             </div>
                         </div>
-                        <div id="listaNombresContenedor" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                            </div>
+                        <div id="listaNombresContenedor" class="flex flex-wrap gap-2 max-h-32 overflow-y-auto"></div>
                     </div>
 
                     <div class="glass p-5 rounded-2xl md:col-span-1">
-                        <h3 class="text-gray-400 uppercase text-xs tracking-widest mb-3">Diferencia (Φ)</h3>
-                        <div class="flex justify-center bg-black/40 rounded-xl p-4">
+                        <h3 class="text-gray-400 uppercase text-xs tracking-widest mb-3">Tu Rostro Matemático</h3>
+                        <div class="flex justify-center bg-black/40 rounded-xl p-4 mb-4">
                             <img id="caraProcesada" class="w-32 h-32 rounded hidden border border-cyan-500/50">
                             <div id="placeholderImg" class="w-32 h-32 flex items-center justify-center text-gray-700">
                                 <i class="fa-solid fa-microchip text-4xl"></i>
                             </div>
                         </div>
+                        <h3 class="text-gray-400 uppercase text-[10px] tracking-widest mb-2">Firma Vectorial (Ω)</h3>
+                        <div id="firmaVectorial" class="flex w-full h-4 gap-1 rounded overflow-hidden"></div>
                     </div>
 
                     <div class="glass p-6 rounded-2xl md:col-span-3 border border-cyan-500/10">
@@ -175,9 +136,9 @@
                        <div id="galeriaEigenfaces" class="flex flex-wrap justify-center gap-4">
                           <p class="text-gray-600 text-xs italic">Cargando espacio vectorial...</p>
                        </div>
-                     <p class="text-[10px] text-gray-500 mt-4 text-center">
-                       Estas son las <strong>Componentes Principales</strong>. Cualquier rostro en el dataset es una combinación lineal de estos espectros.
-                     </p>
+                       <p class="text-[10px] text-gray-500 mt-4 text-center">
+                         Cualquier rostro en el dataset es una combinación lineal de estos espectros.
+                       </p>
                     </div>
 
                     <div class="glass p-5 rounded-2xl md:col-span-1">
@@ -186,7 +147,6 @@
                             <p class="text-gray-600 text-sm italic">Esperando escaneo...</p>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -201,99 +161,74 @@
         navigator.mediaDevices.getUserMedia({ video: true }).then(stream => video.srcObject = stream);
         actualizarEstadoMotor();
 
-        // 1. TRANSICIÓN SUAVE MODO DIOS
         function toggleDeveloperMode() {
-            const wrapper = document.getElementById('debugPanelWrapper');
-            wrapper.classList.toggle('open');
+            document.getElementById('debugPanelWrapper').classList.toggle('open');
         }
 
-        // 2. FUNCIÓN DE BORRADO DE REGISTRO (Thanos)
-async function borrarRostro(event, nombre) {
-    // 1. Freno de mano para que no recargue
-    event.preventDefault(); 
-    
-    if(!confirm(`¿Seguro que quieres borrar la identidad de ${nombre}?`)) return;
-    
-    terminal.innerHTML += `> [SYS] Iniciando borrado de ${nombre}...<br>`;
-    try {
-        // 2. EL HACK: Limpiar el nombre para la URL (Adiós espacios malditos)
-        const nombreSeguro = encodeURIComponent(nombre);
-        
-        // 3. Mandar la petición con el nombre limpio
-        const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar/${nombreSeguro}`, { method: 'DELETE' });
-        const data = await res.json();
-        
-        terminal.innerHTML += `> [SYS] ${data.message}<br>`;
-        
-        // Limpiar UI si el motor se apagó por falta de datos
-        if(data.status === 'warning') {
-            document.getElementById('imgPromedio').classList.add('hidden');
-            document.getElementById('iconVacio').classList.remove('hidden');
-        }
-        actualizarEstadoMotor();
-    } catch(e) {
-        terminal.innerHTML += `> [ERROR] No se pudo conectar con el servidor.<br>`;
-        console.error(e); // Para ver el chisme completo en la consola F12
-    }
-}
-
-        // 3. ACTUALIZAR ESTADO (Ahora con botones de borrar)
-async function actualizarEstadoMotor() {
-    try {
-        const res = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/estado');
-        const data = await res.json();
-        
-        const badge = document.getElementById('badgeEstado');
-        const listaNombresContenedor = document.getElementById('listaNombresContenedor');
-        const galeria = document.getElementById('galeriaEigenfaces'); // <-- Nueva referencia
-
-        listaNombresContenedor.innerHTML = '';
-        galeria.innerHTML = ''; // Limpiar fantasmas viejos
-
-        if (data.status === 'ready') {
-            document.getElementById('imgPromedio').src = `data:image/jpeg;base64,${data.cara_promedio}`;
-            document.getElementById('imgPromedio').classList.remove('hidden');
-            document.getElementById('iconVacio').classList.add('hidden');
-            document.getElementById('numRostros').innerText = data.total;
+        async function borrarRostro(event, nombre) {
+            event.preventDefault(); 
+            if(!confirm(`¿Seguro que quieres borrar la identidad de ${nombre}?`)) return;
             
-            badge.innerText = "ONLINE";
-            badge.className = "px-2 py-1 bg-green-500/20 text-green-400 rounded text-[10px] font-mono";
-
-            // 1. Llenar los tags de nombres para borrar
-            data.nombres.forEach(nombre => {
-                listaNombresContenedor.innerHTML += `
-                    <div class="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300">
-                        <span>${nombre}</span>
-                        <button type="button" onclick="borrarRostro(event, '${nombre}')" class="text-red-400 hover:text-red-300 transition-all">
-                            <i class="fa-solid fa-circle-xmark"></i>
-                        </button>
-                    </div>`;
-            });
-
-            // 2. 🎯 EL SHOW: Dibujar las Eigenfaces
-            if(data.eigenfaces && data.eigenfaces.length > 0) {
-                data.eigenfaces.forEach((imgBase64, index) => {
-                    galeria.innerHTML += `
-                        <div class="group relative">
-                            <img src="data:image/jpeg;base64,${imgBase64}" 
-                                 class="w-20 h-20 rounded-lg border border-white/10 grayscale hover:grayscale-0 transition-all duration-500 shadow-lg hover:shadow-cyan-500/20">
-                            <span class="absolute bottom-0 left-0 right-0 text-[8px] text-center bg-black/60 py-1 opacity-0 group-hover:opacity-100 transition-opacity">v${index+1}</span>
-                        </div>`;
-                });
+            terminal.innerHTML += `> [SYS] Iniciando borrado de ${nombre}...<br>`;
+            try {
+                const nombreSeguro = encodeURIComponent(nombre);
+                const res = await fetch(`https://face-recognition-engine-ks0j.onrender.com/api/borrar_todo?clave=RoroAdmin123`, { method: 'DELETE' }); // Cuidado: borra todo en tu código actual si usas esta ruta general
+                const data = await res.json();
+                terminal.innerHTML += `> [SYS] ${data.message}<br>`;
+                actualizarEstadoMotor();
+            } catch(e) {
+                terminal.innerHTML += `> [ERROR] Servidor no responde.<br>`;
             }
-
-        } else {
-            // ... (lo que ya tenías para cuando está vacío)
-            document.getElementById('numRostros').innerText = '0';
-            listaNombresContenedor.innerHTML = '<span class="text-xs text-gray-500 italic">Sin datos</span>';
-            galeria.innerHTML = '<p class="text-gray-700 text-xs">Dataset insuficiente para generar bases.</p>';
         }
-    } catch (e) {
-        console.error("El backend anda de rumba xd");
-    }
-}
 
-        // Funciones previas adaptadas
+        async function actualizarEstadoMotor() {
+            try {
+                const res = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/estado');
+                const data = await res.json();
+                
+                const badge = document.getElementById('badgeEstado');
+                const listaNombresContenedor = document.getElementById('listaNombresContenedor');
+                const galeria = document.getElementById('galeriaEigenfaces');
+
+                listaNombresContenedor.innerHTML = '';
+                galeria.innerHTML = ''; 
+
+                if (data.status === 'ready') {
+                    document.getElementById('imgPromedio').src = `data:image/jpeg;base64,${data.cara_promedio}`;
+                    document.getElementById('imgPromedio').classList.remove('hidden');
+                    document.getElementById('iconVacio').classList.add('hidden');
+                    document.getElementById('numRostros').innerText = data.total;
+                    
+                    badge.innerText = "ONLINE";
+                    badge.className = "px-2 py-1 bg-green-500/20 text-green-400 rounded text-[10px] font-mono";
+
+                    data.nombres.forEach(nombre => {
+                        listaNombresContenedor.innerHTML += `
+                            <div class="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-gray-300">
+                                <span>${nombre}</span>
+                            </div>`;
+                    });
+
+                    if(data.eigenfaces && data.eigenfaces.length > 0) {
+                        data.eigenfaces.forEach((imgBase64, index) => {
+                            galeria.innerHTML += `
+                                <div class="group relative">
+                                    <img src="data:image/jpeg;base64,${imgBase64}" 
+                                         class="w-20 h-20 rounded-lg border border-white/10 grayscale hover:grayscale-0 transition-all duration-500 shadow-lg hover:shadow-cyan-500/20">
+                                    <span class="absolute bottom-0 left-0 right-0 text-[8px] text-center bg-black/60 py-1 opacity-0 group-hover:opacity-100 transition-opacity">v${index+1}</span>
+                                </div>`;
+                        });
+                    }
+                } else {
+                    document.getElementById('numRostros').innerText = '0';
+                    listaNombresContenedor.innerHTML = '<span class="text-xs text-gray-500 italic">Sin datos</span>';
+                    galeria.innerHTML = '<p class="text-gray-700 text-xs">Dataset insuficiente para generar bases.</p>';
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
         async function registrarRostro() {
             const nombre = document.getElementById('nombreRegistro').value.trim();
             if(!nombre) return alert("¡Ponle nombre!");
@@ -311,102 +246,113 @@ async function actualizarEstadoMotor() {
             actualizarEstadoMotor();
         }
 
-async function capturarYPredecir() {
-    // Ya no hay mira láser cuadrada xd, solo activamos la línea de escaneo
-    document.getElementById('scanLine').classList.remove('hidden');
-    terminal.innerHTML = '> [SCAN] Aislando biometría facial...<br>';
-    
-    const canvas = document.createElement('canvas'); 
-    canvas.width = video.videoWidth; 
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
-    
-    try {
-        const formData = new FormData(); formData.append('file', blob);
-        const response = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/identificar', { method: 'POST', body: formData });
-        const data = await response.json();
+        async function capturarYPredecir() {
+            document.getElementById('scanLine').classList.remove('hidden');
+            terminal.innerHTML = '> [SCAN] Aislando biometría facial...<br>';
+            
+            const canvas = document.createElement('canvas'); 
+            canvas.width = video.videoWidth; 
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg'));
+            
+            try {
+                const formData = new FormData(); formData.append('file', blob);
+                const response = await fetch('https://face-recognition-engine-ks0j.onrender.com/api/identificar', { method: 'POST', body: formData });
+                const data = await response.json();
 
-        // Apagamos la línea láser
-        document.getElementById('scanLine').classList.add('hidden');
+                document.getElementById('scanLine').classList.add('hidden');
 
-        if(data.nombre === "FALTAN_DATOS" || data.nombre === "NO_CARA") {
-            terminal.innerHTML += `<span class="text-red-500">> [ERROR] ${data.nombre}</span><br>`;
-            return;
+                if(data.nombre === "FALTAN_DATOS" || data.nombre === "NO_CARA") {
+                    terminal.innerHTML += `<span class="text-red-500">> [ERROR] ${data.nombre}</span><br>`;
+                    return;
+                }
+
+                terminal.innerHTML += '> [MATH] Restando Cara Promedio (Φ = Γ - Ψ)...<br>';
+                terminal.innerHTML += '> [PCA] Proyectando en subespacio Eigen (Ω)...<br>';
+                
+                let i = 0;
+                let pesosInterval = setInterval(() => {
+                    if(i >= data.pesos_reales.length) {
+                        clearInterval(pesosInterval);
+                        mostrarResultados(data);
+                    } else {
+                        let chunk = data.pesos_reales.slice(i, i+4).map(n => n > 0 ? `+${n}` : n).join('\t');
+                        terminal.innerHTML += `<span class="text-cyan-600">> ω[${i}-${(i+3) > (data.pesos_reales.length-1) ? (data.pesos_reales.length-1) : (i+3)}]: [ ${chunk} ]</span><br>`;
+                        terminal.scrollTop = terminal.scrollHeight;
+                        i += 4;
+                    }
+                }, 150);
+
+            } catch (err) {
+                document.getElementById('scanLine').classList.add('hidden');
+                terminal.innerHTML += '<span class="text-red-500">> [ERROR] Kernel Panic. Servidor caído.</span><br>';
+            }
         }
 
-        // Imprimir el Álgebra REAL en la terminal paso a paso
-        terminal.innerHTML += '> [MATH] Restando Cara Promedio (Φ = Γ - Ψ)...<br>';
-        terminal.innerHTML += '> [PCA] Proyectando en subespacio Eigen (Ω)...<br>';
-        
-        let i = 0;
-        let pesosInterval = setInterval(() => {
-            if(i >= data.pesos_reales.length) {
-                clearInterval(pesosInterval);
-                mostrarResultados(data); // Llamamos al final del renderizado
-            } else {
-                // Imprimimos el array real de a 4 dimensiones por línea
-                let chunk = data.pesos_reales.slice(i, i+4).map(n => n > 0 ? `+${n}` : n).join('\t');
-                terminal.innerHTML += `<span class="text-cyan-600">> ω[${i}-${i+3}]: [ ${chunk} ]</span><br>`;
-                terminal.scrollTop = terminal.scrollHeight;
-                i += 4;
+        function mostrarResultados(data) {
+            podioDistancias.innerHTML = '';
+            data.top_3.forEach((m, i) => {
+               let colorBarra = i === 0 ? 'bg-cyan-400' : 'bg-gray-700';
+               let glow = i === 0 ? 'box-shadow: 0 0 12px #22d3ee;' : '';
+               
+               podioDistancias.innerHTML += `
+                  <div class="mb-4">
+                     <div class="flex justify-between text-[11px] mb-1.5 font-mono uppercase tracking-widest">
+                        <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
+                            <i class="fa-solid ${i===0 ? 'fa-crosshairs' : 'fa-user'} mr-1"></i> ${m.nombre}
+                        </span>
+                        <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-600'}">${m.distancia}% MATCH</span>
+                     </div>
+                     <div class="w-full bg-black/60 rounded-full h-2 border border-white/5 overflow-hidden">
+                        <div class="${colorBarra} h-full rounded-full transition-all duration-[1500ms] ease-out" 
+                             style="width: 0%; ${glow}" data-width="${m.distancia}%"></div>
+                     </div>
+                  </div>`;
+            });
+
+            setTimeout(() => {
+                const barras = podioDistancias.querySelectorAll('[data-width]');
+                barras.forEach(b => b.style.width = b.getAttribute('data-width'));
+            }, 50);
+
+            document.getElementById('infoMatch').classList.remove('hidden');
+            document.getElementById('nombreMatch').innerText = data.nombre;
+            document.getElementById('confianzaMatch').innerText = `${data.confianza}% CONFIDENCE`;
+            document.getElementById('statusLabel').innerText = "IDENTIFIED";
+
+            // 🧬 DIBUJAR CÓDIGO DE BARRAS BIOMÉTRICO
+            const maxAbs = Math.max(...data.pesos_reales.map(Math.abs));
+            const contenedorFirma = document.getElementById('firmaVectorial');
+            contenedorFirma.innerHTML = '';
+            
+            data.pesos_reales.forEach(peso => {
+                const intensidad = maxAbs === 0 ? 0 : Math.abs(peso) / maxAbs;
+                const colorRGB = peso > 0 ? '6, 182, 212' : '255, 0, 60'; 
+                contenedorFirma.innerHTML += `
+                    <div class="flex-1 h-full transition-all duration-500" 
+                         style="background-color: rgba(${colorRGB}, ${intensidad}); 
+                                box-shadow: 0 0 10px rgba(${colorRGB}, ${intensidad * 0.5});">
+                    </div>
+                `;
+            });
+
+            // 👻 MOSTRAR EL MONSTRUO (RECONSTRUCCIÓN DE PLAY 1)
+            if (data.rostro_reconstruido) {
+                const imgElement = document.getElementById('caraProcesada');
+                imgElement.src = `data:image/jpeg;base64,${data.rostro_reconstruido}`;
+                imgElement.classList.remove('hidden');
+                
+                imgElement.classList.remove('ghost-reveal'); 
+                void imgElement.offsetWidth; 
+                imgElement.classList.add('ghost-reveal');
+                
+                document.getElementById('placeholderImg').classList.add('hidden');
             }
-        }, 150);
-
-    } catch (err) {
-        document.getElementById('scanLine').classList.add('hidden');
-        terminal.innerHTML += '<span class="text-red-500">> [ERROR] Kernel Panic. Servidor caído.</span><br>';
-    }
-}
-
-// Función auxiliar para mostrar el podio y la foto cuando termine de "calcular"
-function mostrarResultados(data) {
-    podioDistancias.innerHTML = '';
-    data.top_3.forEach((m, i) => {
-       let colorBarra = i === 0 ? 'bg-cyan-400' : 'bg-gray-700';
-       let glow = i === 0 ? 'box-shadow: 0 0 12px #22d3ee;' : '';
-       
-       podioDistancias.innerHTML += `
-          <div class="mb-4">
-             <div class="flex justify-between text-[11px] mb-1.5 font-mono uppercase tracking-widest">
-                <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-500'}">
-                    <i class="fa-solid ${i===0 ? 'fa-crosshairs' : 'fa-user'} mr-1"></i> ${m.nombre}
-                </span>
-                <span class="${i===0 ? 'text-cyan-400 font-bold' : 'text-gray-600'}">${m.distancia}% MATCH</span>
-             </div>
-             <div class="w-full bg-black/60 rounded-full h-2 border border-white/5 overflow-hidden">
-                <div class="${colorBarra} h-full rounded-full transition-all duration-[1500ms] ease-out" 
-                     style="width: 0%; ${glow}" data-width="${m.distancia}%"></div>
-             </div>
-          </div>`;
-    });
-
-    setTimeout(() => {
-        const barras = podioDistancias.querySelectorAll('[data-width]');
-        barras.forEach(b => b.style.width = b.getAttribute('data-width'));
-    }, 50);
-
-    document.getElementById('infoMatch').classList.remove('hidden');
-    document.getElementById('nombreMatch').innerText = data.nombre;
-    document.getElementById('confianzaMatch').innerText = `${data.confianza}% CONFIDENCE`;
-    document.getElementById('statusLabel').innerText = "IDENTIFIED";
-
-    // 4. Efecto Fantasma Real
-    if (data.cara_procesada) {
-        const imgElement = document.getElementById('caraProcesada');
-        imgElement.src = `data:image/jpeg;base64,${data.cara_procesada}`;
-        imgElement.classList.remove('hidden');
-        // Le aplicamos la clase CSS de revelado para que parezca magia oscura
-        imgElement.classList.remove('ghost-reveal'); 
-        void imgElement.offsetWidth; // Trigger reflow xd
-        imgElement.classList.add('ghost-reveal');
-        
-        document.getElementById('placeholderImg').classList.add('hidden');
-    }
-    
-    terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
-    terminal.scrollTop = terminal.scrollHeight;
-}
+            
+            terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
+            terminal.scrollTop = terminal.scrollHeight;
+        }
     </script>
 </body>
 </html>

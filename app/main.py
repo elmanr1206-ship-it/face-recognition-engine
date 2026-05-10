@@ -39,7 +39,7 @@ pca = PCAEngine(n_components=20)
 nombres_db = []
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
 
-# --- 🧠 LÓGICA DE MOTOR: AHORA SÍ RE-ENTRENA CRUDO ---
+# --- 🧠 LÓGICA DE MOTOR ---
 def entrenar_motor_desde_db(db: Session):
     global nombres_db
     registros = db.query(UsuarioRostro).all()
@@ -56,20 +56,20 @@ def entrenar_motor_desde_db(db: Session):
     
     for r in registros:
         nombres_db.append(r.nombre)
-        all_raw_faces.append(json.loads(r.vector_pesos)) # Cargamos píxeles crudos
+        all_raw_faces.append(json.loads(r.vector_pesos)) 
     
     X = np.array(all_raw_faces)
-    pca.fit(X) # Re-entrenamos a la bestia
+    pca.fit(X) 
     return True
 
-# --- 📸 PROCESAMIENTO: VISIÓN NOCTURNA ACTIVADA ---
+# --- 📸 PROCESAMIENTO: VISIÓN NOCTURNA ---
 def cazar_cara(imagen_bytes):
     nparr = np.frombuffer(imagen_bytes, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None: return None, "FOTO_CORRUPTA"
     
     gris = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    gris = cv2.equalizeHist(gris) # HACK: Ecualizamos para que vea en tus fotos oscuras xd
+    gris = cv2.equalizeHist(gris) 
     
     if np.mean(gris) < 20: return None, "OSCURIDAD"
         
@@ -93,7 +93,6 @@ async def obtener_estado(db: Session = Depends(get_db)):
     if conteo < 2 or pca.mean_face is None:
         return {"status": "vacio", "total": conteo, "nombres": nombres_db}
 
-    # Mandarle la comida que el Frontend lambón pide (Base64)
     _, buffer_mean = cv2.imencode('.jpg', pca.mean_face.reshape(100, 100))
     mean_b64 = base64.b64encode(buffer_mean).decode('utf-8')
 
@@ -104,7 +103,7 @@ async def obtener_estado(db: Session = Depends(get_db)):
         eigen_b64_list.append(base64.b64encode(buffer_ef).decode('utf-8'))
 
     return {
-        "status": "ready", # AHORA SÍ HACE MATCH CON TU JS
+        "status": "ready",
         "total": conteo,
         "nombres": nombres_db,
         "cara_promedio": mean_b64,
@@ -123,7 +122,6 @@ async def registrar(nombre: str, file: UploadFile = File(...), db: Session = Dep
     rostro, status = cazar_cara(contents)
     if status != "OK": return {"message": f"Error: {status}"}
     
-    # GUARDAMOS CRUDO PARA EVITAR AMNESIA
     vector_crudo = rostro.flatten().tolist()
     nuevo_usuario = UsuarioRostro(nombre=nombre.upper(), vector_pesos=json.dumps(vector_crudo))
     db.add(nuevo_usuario)
@@ -161,15 +159,23 @@ async def identificar(file: UploadFile = File(...), db: Session = Depends(get_db
     _, buffer_cara = cv2.imencode('.jpg', rostro)
     cara_b64 = base64.b64encode(buffer_cara).decode('utf-8')
 
-    # 🌟 AQUÍ ESTÁ LA MAGIA REAL: Formateamos el vector de pesos reales para el JS
     pesos_reales = [round(float(w), 4) for w in projection]
+
+    # 🌟 RECONSTRUCCIÓN DEL MONSTRUO
+    reconstruccion_centrada = np.dot(projection, pca.eigenfaces)
+    rostro_reconstruido = reconstruccion_centrada + pca.mean_face
+    
+    rostro_reconstruido_norm = cv2.normalize(rostro_reconstruido.reshape(100, 100), None, 0, 255, cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    _, buffer_recon = cv2.imencode('.jpg', rostro_reconstruido_norm)
+    recon_b64 = base64.b64encode(buffer_recon).decode('utf-8')
 
     return {
         "nombre": top_3[0]["nombre"] if top_3[0]["distancia"] > 0 else "DESCONOCIDO",
         "confianza": top_3[0]["distancia"],
         "top_3": top_3,
         "cara_procesada": cara_b64,
-        "pesos_reales": pesos_reales # <-- La verdadera matemática, cero humo.
+        "pesos_reales": pesos_reales,
+        "rostro_reconstruido": recon_b64
     }
 
 @app.delete("/api/borrar_todo")
