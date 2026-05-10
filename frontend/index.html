@@ -297,8 +297,13 @@
                         mostrarResultados(data);
                     } else {
                         let chunk = data.pesos_reales.slice(i, i+4).map(n => n > 0 ? `+${n}` : n).join('\t');
-                        terminal.innerHTML += `<span class="text-cyan-600">> ω[${i}-${(i+3) > (data.pesos_reales.length-1) ? (data.pesos_reales.length-1) : (i+3)}]: [ ${chunk} ]</span><br>`;
-                        terminal.scrollTop = terminal.scrollHeight;
+            if (data.nombre === "DESCONOCIDO") {
+                terminal.innerHTML += '<span class="text-red-500 font-bold">> [SYS] ALERTA DE INTRUSO. Acceso denegado. Llamando a seguridad...</span><br>';
+            } else {
+                terminal.innerHTML += '<span class="text-green-400">> [SYS] Match encontrado. Acceso VIP concedido.</span><br>';
+            }
+            
+            terminal.scrollTop = terminal.scrollHeight;
                         i += 4;
                     }
                 }, 150);
