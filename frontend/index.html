@@ -297,13 +297,8 @@
                         mostrarResultados(data);
                     } else {
                         let chunk = data.pesos_reales.slice(i, i+4).map(n => n > 0 ? `+${n}` : n).join('\t');
-            if (data.nombre === "DESCONOCIDO") {
-                terminal.innerHTML += '<span class="text-red-500 font-bold">> [SYS] ALERTA DE INTRUSO. Acceso denegado. Llamando a seguridad...</span><br>';
-            } else {
-                terminal.innerHTML += '<span class="text-green-400">> [SYS] Match encontrado. Acceso VIP concedido.</span><br>';
-            }
-            
-            terminal.scrollTop = terminal.scrollHeight;
+                        terminal.innerHTML += `<span class="text-cyan-600">> ω[${i}-${(i+3) > (data.pesos_reales.length-1) ? (data.pesos_reales.length-1) : (i+3)}]: [ ${chunk} ]</span><br>`;
+                        terminal.scrollTop = terminal.scrollHeight;
                         i += 4;
                     }
                 }, 150);
@@ -391,7 +386,28 @@
                 }, 600);
             }
             
-            terminal.innerHTML += '> [SYS] Match encontrado. Acceso concedido.<br>';
+// 👻 MOSTRAR EL MONSTRUO CON GLITCH
+            if (data.rostro_reconstruido) {
+                const imgElement = document.getElementById('caraProcesada');
+                imgElement.src = `data:image/jpeg;base64,${data.rostro_reconstruido}`;
+                imgElement.classList.remove('hidden');
+                
+                imgElement.classList.add('glitch-anim');
+                document.getElementById('placeholderImg').classList.add('hidden');
+
+                setTimeout(() => {
+                    imgElement.classList.remove('glitch-anim');
+                    imgElement.classList.add('ghost-reveal');
+                }, 600);
+            }
+            
+            // 🚨 EL VERDADERO FILTRO DE SEGURIDAD
+            if (data.nombre === "DESCONOCIDO") {
+                terminal.innerHTML += '<span class="text-red-500 font-bold">> [SYS] ALERTA DE INTRUSO. Acceso denegado. Llamando a seguridad...</span><br>';
+            } else {
+                terminal.innerHTML += '<span class="text-green-400">> [SYS] Match encontrado. Acceso VIP concedido.</span><br>';
+            }
+            
             terminal.scrollTop = terminal.scrollHeight;
         }
     </script>
