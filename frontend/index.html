@@ -62,7 +62,11 @@
             <div class="relative glass rounded-3xl overflow-hidden shadow-2xl border-2 border-cyan-500/20">
                 <video id="webcam" autoplay playsinline class="w-full h-[450px] object-cover transform -scale-x-100"></video>
                 <div id="scanLine" class="absolute left-0 right-0 top-0 scan-line hidden"></div>
-            </div>
+    
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-64 h-80 border-2 border-dashed border-cyan-400/40 rounded-[120px] relative"></div>
+        </div>
+    </div>
 
             <div class="glass p-6 rounded-3xl flex gap-4 items-center">
                 <input type="text" id="nombreRegistro" placeholder="Nombre completo del compa..." 
